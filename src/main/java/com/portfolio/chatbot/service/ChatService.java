@@ -4,16 +4,24 @@ import com.portfolio.chatbot.model.ChatMessage;
 import com.portfolio.chatbot.repository.ChatMessageRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class ChatService {
+
     private final ChatMessageRepository chatRepo;
     private final MistralApiService mistralService;
+
+    @Autowired
+    public ChatService(ChatMessageRepository chatRepo, MistralApiService mistralService) {
+        this.chatRepo = chatRepo;
+        this.mistralService = mistralService;
+    }
+
     @Transactional
     public ChatMessage processUserMessage(String sessionId, String userMessage) {
         // Save user message
@@ -48,7 +56,18 @@ public class ChatService {
         aiMsg.setRole("assistant");
         return chatRepo.save(aiMsg);
     }
+    @Transactional
     public List<ChatMessage> getChatHistory(String sessionId) {
         return chatRepo.findBySessionId(sessionId);
+    }
+
+    @Transactional
+    public List<ChatMessage> getRecentChatSessions() {
+        return chatRepo.findRecentChatSessions();
+    }
+
+    @Transactional
+    public void deleteChatSession(String sessionId) {
+        chatRepo.deleteBySessionId(sessionId);
     }
 }

@@ -24,6 +24,15 @@ public class RagService {
     private final DocumentChunkRepository chunkRepo;
     private final MistralApiService mistralApiService;
 
+
+    public RagService(DocumentParser documentParser, TextChunker textChunker, EmbeddingService embeddingService, DocumentChunkRepository chunkRepo, MistralApiService mistralApiService) {
+        this.documentParser = documentParser;
+        this.textChunker = textChunker;
+        this.embeddingService = embeddingService;
+        this.chunkRepo = chunkRepo;
+        this.mistralApiService = mistralApiService;
+    }
+
     @Transactional
     public void ingestDocument(MultipartFile file) throws IOException, TikaException {
         chunkRepo.deleteAll(); // clear existing chunks

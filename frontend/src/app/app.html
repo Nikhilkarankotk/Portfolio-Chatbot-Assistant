@@ -1,0 +1,4 @@
+<div class="app-container">
+  <app-sidebar (newChat)="chatInterface.clearChat()" (selectChat)="chatInterface.loadChat($event)"></app-sidebar>
+  <app-chat-interface #chatInterface></app-chat-interface>
+</div>

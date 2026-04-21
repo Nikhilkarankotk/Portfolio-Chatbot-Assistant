@@ -27,6 +27,8 @@ public class MistralApiService {
                 ))
                 .retrieve()
                 .bodyToMono(JsonNode.class)
+                .timeout(java.time.Duration.ofSeconds(30))
+                .retry(3)
                 .map(response -> response.get("choices").get(0).get("message").get("content").asText());
     }
 

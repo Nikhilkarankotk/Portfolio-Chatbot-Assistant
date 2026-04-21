@@ -1,0 +1,141 @@
+<div class="chat-container">
+
+  <!-- Messages Area -->
+  <div class="messages-area" #chatContainer>
+
+    <!-- Empty / Welcome State -->
+    <div *ngIf="messages.length === 0" class="empty-state">
+      <div class="empty-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          <path d="M8 9h8"></path>
+          <path d="M8 13h6"></path>
+        </svg>
+      </div>
+      <h2>AI Portfolio Assistant</h2>
+      <p>I'm here to help you navigate and analyze your portfolio. Upload a document to get started with intelligent insights.</p>
+
+      <div class="suggestion-chips">
+        <button class="chip" (click)="userInput = 'What are the key skills mentioned?'">
+          ✨ Key Skills
+        </button>
+        <button class="chip" (click)="userInput = 'Summarize my professional experience'">
+          📄 Experience
+        </button>
+        <button class="chip" (click)="userInput = 'Show me highlighted projects'">
+          🚀 Projects
+        </button>
+        <button class="chip" (click)="userInput = 'What tech stack is prominent?'">
+          🛠️ Tech Stack
+        </button>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div *ngFor="let msg of messages" class="message-wrapper" [class.user]="msg.role === 'user'" [class.assistant]="msg.role === 'assistant'">
+      <div class="avatar" [class.user-avatar]="msg.role === 'user'" [class.bot-avatar]="msg.role === 'assistant'">
+        <span *ngIf="msg.role === 'user'">U</span>
+        <svg *ngIf="msg.role === 'assistant'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 8V4H8"></path>
+          <rect x="5" y="8" width="14" height="10" rx="2"></rect>
+          <circle cx="9" cy="13" r="1"></circle>
+          <circle cx="15" cy="13" r="1"></circle>
+        </svg>
+      </div>
+      <div class="message-bubble" [class.user-bubble]="msg.role === 'user'" [class.bot-bubble]="msg.role === 'assistant'" [class.error-bubble]="msg.isError">
+        <div class="message-text markdown-body" *ngIf="msg.htmlContent" [innerHTML]="msg.htmlContent"></div>
+        <p class="message-text" *ngIf="!msg.htmlContent">{{ msg.content }}</p>
+        <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
+      </div>
+    </div>
+
+    <!-- Typing Indicator -->
+    <div class="message-wrapper assistant" *ngIf="isLoading">
+      <div class="avatar bot-avatar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 8V4H8"></path>
+          <rect x="5" y="8" width="14" height="10" rx="2"></rect>
+          <circle cx="9" cy="13" r="1"></circle>
+          <circle cx="15" cy="13" r="1"></circle>
+        </svg>
+      </div>
+      <div class="message-bubble bot-bubble">
+        <div class="loading-dots">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Document Upload Banner -->
+  <div class="upload-banner" *ngIf="selectedFile || isIngesting || ingestSuccess || ingestError">
+    <div class="upload-info" *ngIf="selectedFile && !isIngesting">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-color)">
+        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+        <polyline points="13 2 13 9 20 9"></polyline>
+      </svg>
+      <span>{{ selectedFile.name }}</span>
+      <button class="banner-btn primary" (click)="ingestDocument()">Process Document</button>
+      <button class="banner-btn ghost" (click)="removeFile()">✕</button>
+    </div>
+    <div class="upload-info ingesting" *ngIf="isIngesting">
+      <div class="mini-spinner"></div>
+      <span>Analyzing document structure...</span>
+    </div>
+    <div class="upload-info success" *ngIf="ingestSuccess">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+      </svg>
+      <span>Knowledge base updated. You can now inquire about the content.</span>
+    </div>
+    <div class="upload-info error-info" *ngIf="ingestError">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <span>{{ ingestError }}</span>
+      <button class="banner-btn ghost" (click)="ingestError = ''">✕</button>
+    </div>
+  </div>
+
+  <!-- Input Area -->
+  <div class="input-area">
+    <div class="input-container">
+
+      <!-- File Attach Button -->
+      <label for="file-upload" class="icon-btn" title="Attach document">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+        </svg>
+        <span class="file-badge" *ngIf="selectedFile">1</span>
+      </label>
+      <input #fileInput id="file-upload" type="file" style="display:none"
+        (change)="onFileSelected($event)" accept=".pdf,.txt,.doc,.docx">
+
+      <!-- Text Input -->
+      <input
+        type="text"
+        [(ngModel)]="userInput"
+        (keyup.enter)="sendMessage()"
+        placeholder="Type your message..."
+        [disabled]="isLoading"
+        class="text-input"
+      />
+
+      <!-- Send Button -->
+      <button class="send-btn" (click)="sendMessage()"
+        [disabled]="!userInput.trim() || isLoading">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+
+    </div>
+    <p class="input-hint">Mistral AI Engine · RAG Optimized</p>
+  </div>
+
+</div>

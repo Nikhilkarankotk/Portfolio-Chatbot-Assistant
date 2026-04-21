@@ -11,10 +11,13 @@ import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/rag")
-@RequiredArgsConstructor
 public class RagController {
+
     private final RagService ragService;
 
+    public RagController(RagService ragService) {
+        this.ragService = ragService;
+    }
 
     @PostMapping("/ingest")
     public ResponseEntity<String> ingestDocument(@RequestPart("file") MultipartFile file) throws IOException, TikaException {

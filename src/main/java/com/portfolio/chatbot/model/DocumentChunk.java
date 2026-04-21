@@ -21,4 +21,20 @@ public class DocumentChunk {
     @CollectionTable(name = "document_chunk_embeddings", joinColumns = @JoinColumn(name = "chunk_id"))
     @Column(name = "embedding_value")
     private List<Float> embedding;
+
+    public List<Float> getEmbedding() {
+        return embedding;
+    }
+
+    public void setEmbedding(List<Float> embedding) {
+        this.embedding = embedding;
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public void setText(String text) {
+        this.text = text;
+    }
 }

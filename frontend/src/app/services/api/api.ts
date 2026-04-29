@@ -27,37 +27,49 @@ export class Api {
     return sessionId;
   }
 
-  private getChatHeaders(): HttpHeaders {
-    return new HttpHeaders({
+  private getChatHeaders(isMultipart: boolean = false): HttpHeaders {
+    let headers = new HttpHeaders({
       'X-Session-ID': this.getSessionId(),
-      'Content-Type': 'application/json',
       'Accept': '*/*'
     });
+    
+    if (!isMultipart) {
+      headers = headers.set('Content-Type', 'application/json');
+    }
+    
+    return headers;
   }
 
   // --- Chat API ---
   sendChatMessage(message: string): Observable<any> {
-    return this.http.post(`${this.backendUrl}/chat`, { message }, { headers: this.getChatHeaders() });
+    return this.http.post(`${this.backendUrl}/chat`, { message }, { headers: this.getChatHeaders(false) });
   }
 
   sendChatFile(message: string, file: File): Observable<any> {
     const formData = new FormData();
     formData.append('message', message);
     formData.append('pdf', file);
-    return this.http.post(`${this.backendUrl}/chat`, formData, { headers: this.getChatHeaders() });
+    return this.http.post(`${this.backendUrl}/chat`, formData, { headers: this.getChatHeaders(true) });
   }
 
   getChatHistory(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.backendUrl}/history`, { headers: this.getChatHeaders() });
+    return this.http.get<any[]>(`${this.backendUrl}/history`, { headers: this.getChatHeaders(false) });
   }
 
   // --- Session History API ---
   getChatSessions(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.backendUrl}/history/sessions`);
+    return this.http.get<any[]>(`${this.backendUrl}/history/sessions`, { headers: this.getChatHeaders(false) });
   }
 
   deleteChatSession(sessionId: string): Observable<any> {
     return this.http.delete(`${this.backendUrl}/history/sessions/${sessionId}`);
+  }
+
+  submitFeedback(messageId: number, rating: number, correctedAnswer?: string): Observable<any> {
+    const body = { messageId, rating, correctedAnswer };
+    return this.http.post(`${this.backendUrl}/feedback`, body, { 
+      headers: this.getChatHeaders(false) 
+    });
   }
 
   // --- Mistral API ---
@@ -72,12 +84,15 @@ export class Api {
   ingestRagDocument(file: File): Observable<any> {
     const formData = new FormData();
     formData.append('file', file);
-    return this.http.post(`${this.backendUrl}/rag/ingest`, formData, { responseType: 'text' as 'json' });
+    return this.http.post(`${this.backendUrl}/rag/ingest`, formData, { 
+      headers: this.getChatHeaders(true),
+      responseType: 'text' as 'json' 
+    });
   }
 
   queryRag(query: string): Observable<any> {
     return this.http.post(`${this.backendUrl}/rag/query`, query, {
-      headers: new HttpHeaders({ 'Content-Type': 'text/plain' }),
+      headers: this.getChatHeaders(false),
       responseType: 'text' as 'json'
     });
   }

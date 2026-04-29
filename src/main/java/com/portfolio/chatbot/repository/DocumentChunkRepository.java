@@ -13,10 +13,15 @@ public interface DocumentChunkRepository extends JpaRepository<DocumentChunk, Lo
 
     @Query(value = """
     SELECT * FROM document_chunk
+    WHERE session_id = :sessionId
     ORDER BY embedding <-> CAST(:embedding AS vector)
     LIMIT 5
     """, nativeQuery = true)
-    List<DocumentChunk> findSimilarChunks(String embedding);
+    List<DocumentChunk> findSimilarChunks(String embedding, String sessionId);
+
+    long countBySessionId(String sessionId);
+
+    void deleteBySessionId(String sessionId);
 }
 
 

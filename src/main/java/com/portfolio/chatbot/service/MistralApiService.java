@@ -22,7 +22,7 @@ public class MistralApiService {
         return webClient.post()
                 .uri("/chat/completions")
                 .bodyValue(Map.of(
-                    "model", "mistral-tiny",
+                    "model", "mistral-small-latest",
                     "messages", List.of(Map.of("role", "user", "content", prompt))
                 ))
                 .retrieve()

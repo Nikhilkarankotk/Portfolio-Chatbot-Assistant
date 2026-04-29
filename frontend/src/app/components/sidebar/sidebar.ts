@@ -26,13 +26,9 @@ export class Sidebar implements OnInit {
     this.api.getChatSessions().subscribe({
       next: (data) => {
         this.history = data ?? [];
-        if (this.history.length === 0) {
-           alert("API call succeeded but returned 0 active sessions from database.");
-        }
       },
       error: (err) => {
         this.loadError = true;
-        alert("Sidebar API explicitly failed: " + err.message + "\nStatus: " + err.status);
       }
     });
   }

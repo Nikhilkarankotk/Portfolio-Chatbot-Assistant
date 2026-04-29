@@ -146,8 +146,18 @@
 }
 
 /* ── Bubbles ── */
-.message-bubble {
+.message-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   max-width: 75%;
+}
+
+.message-wrapper.user .message-container {
+  align-items: flex-end;
+}
+
+.message-bubble {
   padding: 12px 20px;
   border-radius: 20px;
   position: relative;
@@ -464,18 +474,23 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 8px;
-  gap: 12px;
+  padding: 0 4px;
+  min-height: 24px;
+  width: 100%;
+}
+
+.message-wrapper.user .message-footer {
+  flex-direction: row-reverse;
 }
 
 .feedback-actions {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   opacity: 0;
-  transition: var(--transition);
+  transition: opacity 0.2s ease;
 }
 
-.message-bubble:hover .feedback-actions {
+.message-container:hover .feedback-actions {
   opacity: 1;
 }
 
@@ -494,6 +509,15 @@
 .action-btn:hover {
   background: rgba(255, 255, 255, 0.05);
   color: var(--accent-color);
+}
+
+.user-bubble .action-btn {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.user-bubble .action-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
 }
 
 .action-btn.active {
@@ -599,3 +623,115 @@
   gap: 12px;
   margin-top: 24px;
 }
+
+/* ── Inline Editor (ChatGPT Style) ── */
+.inline-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.edit-textarea {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px;
+  color: inherit;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 80px;
+  outline: none;
+}
+
+.user-bubble .edit-textarea {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.edit-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.edit-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: var(--transition);
+}
+
+.edit-btn.cancel {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.user-bubble .edit-btn.cancel {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.edit-btn.save {
+  background: var(--accent-color);
+  color: white;
+}
+
+.user-bubble .edit-btn.save {
+  background: white;
+  color: var(--accent-color);
+}
+
+.edit-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* ── Tooltips ── */
+.tooltip-container {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(5px);
+  background: #1e293b;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 100;
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -4px;
+  border-width: 4px;
+  border-style: solid;
+  border-color: #1e293b transparent transparent transparent;
+}
+
+.tooltip-container:hover .tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Removed user-bubble tooltip overrides because tooltips are now outside and should look consistent */

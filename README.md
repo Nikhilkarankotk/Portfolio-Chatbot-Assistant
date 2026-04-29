@@ -2,8 +2,6 @@
 
 A premium, state-of-the-art AI Chatbot platform built with a **Hybrid RAG (Retrieval-Augmented Generation)** architecture. This application allows users to interact with an intelligent assistant that can answer general knowledge questions and perform deep analysis on uploaded documents.
 
-![New Chat Interface](src/main/resources/NewChatInterface.png)
-
 ## 🚀 Key Features
 
 -   **Hybrid AI Engine**: Seamlessly switches between general LLM reasoning and document-specific retrieval (RAG) based on context.
@@ -32,42 +30,20 @@ A premium, state-of-the-art AI Chatbot platform built with a **Hybrid RAG (Retri
 -   **Outfit Typography**: Clean, modern font selection from Google Fonts.
 -   **Marked.js**: Full Markdown support for AI responses (code blocks, tables, lists).
 
-## 📦 Setup & Installation
-
 ### Prerequisites
 -   JDK 21 or higher
 -   Maven 3.x
 -   Node.js (LTS version)
 -   PostgreSQL instance
 
-### Backend Setup
-1.  Configure your database credentials in `src/main/resources/application.properties`.
-2.  Add your AI API keys (e.g., Mistral/OpenAI) to the environment variables or configuration file.
-3.  Run the application:
-    ```bash
-    mvn spring-boot:run
-    ```
-
-### Frontend Setup
-1.  Navigate to the `frontend` directory:
-    ```bash
-    cd frontend
-    ```
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-3.  Start the development server:
-    ```bash
-    npm start
-    ```
-    The app will be available at `http://localhost:4200`.
-
 ## 🖼️ Application Walkthrough
 
 ### 🏠 Home Page
 The initial entry point showcasing the clean, glassmorphism design and quick suggestions.
 ![Home Page](src/main/resources/HomePage.png)
+
+### New Chat Interface
+![New Chat Interface](src/main/resources/NewChatInterface.png)
 
 ### 📄 Document Ingestion
 Uploading and analyzing documents in real-time with visual processing feedback.

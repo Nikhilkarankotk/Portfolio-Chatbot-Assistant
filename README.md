@@ -2,7 +2,7 @@
 
 A premium, state-of-the-art AI Chatbot platform built with a **Hybrid RAG (Retrieval-Augmented Generation)** architecture. This application allows users to interact with an intelligent assistant that can answer general knowledge questions and perform deep analysis on uploaded documents.
 
-![Portfolio Chatbot Preview](frontend/src/assets/preview.png) *(Note: Add your actual preview image here)*
+![New Chat Interface](src/main/resources/NewChatInterface.png)
 
 ## 🚀 Key Features
 
@@ -62,6 +62,28 @@ A premium, state-of-the-art AI Chatbot platform built with a **Hybrid RAG (Retri
     npm start
     ```
     The app will be available at `http://localhost:4200`.
+
+## 🖼️ Application Walkthrough
+
+### 🏠 Home Page
+The initial entry point showcasing the clean, glassmorphism design and quick suggestions.
+![Home Page](src/main/resources/HomePage.png)
+
+### 📄 Document Ingestion
+Uploading and analyzing documents in real-time with visual processing feedback.
+![Document Ingestion](src/main/resources/Document_Ingestion_Phase_RAG_Capability.png)
+
+### ✅ Knowledge Integration
+The system confirms when the document has been successfully indexed and is ready for querying.
+![Knowledge Updated](src/main/resources/Knowledge_Updated_RAG_Capabailities.png)
+
+### 🔍 RAG Querying
+Asking complex questions based on the uploaded content and receiving context-aware responses.
+![RAG Query Response](src/main/resources/Query_Response_Upon_Document_Ingestion.png)
+
+### 🕒 Chat History & Feedback
+Managing multiple sessions and providing feedback on AI responses to improve accuracy.
+![Chat History](src/main/resources/Recent_Chat_History_FeedbackSuport.png)
 
 ## 🏗️ Architecture
 The system uses a **Session-Isolated RAG** model. When a document is uploaded, it is:

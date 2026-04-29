@@ -22,11 +22,13 @@ public class MistralApiService {
         return webClient.post()
                 .uri("/chat/completions")
                 .bodyValue(Map.of(
-                    "model", "mistral-tiny",
+                    "model", "mistral-small-latest",
                     "messages", List.of(Map.of("role", "user", "content", prompt))
                 ))
                 .retrieve()
                 .bodyToMono(JsonNode.class)
+                .timeout(java.time.Duration.ofSeconds(30))
+                .retry(3)
                 .map(response -> response.get("choices").get(0).get("message").get("content").asText());
     }
 

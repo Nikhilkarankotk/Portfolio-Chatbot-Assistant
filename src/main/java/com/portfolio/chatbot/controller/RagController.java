@@ -11,20 +11,27 @@ import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/rag")
-@RequiredArgsConstructor
 public class RagController {
+
     private final RagService ragService;
 
+    public RagController(RagService ragService) {
+        this.ragService = ragService;
+    }
 
     @PostMapping("/ingest")
-    public ResponseEntity<String> ingestDocument(@RequestPart("file") MultipartFile file) throws IOException, TikaException {
-//        log.info("Ingesting document: {}", file.getOriginalFilename());
-        ragService.ingestDocument(file);
-        return ResponseEntity.ok("Document ingested successfully");
+    public ResponseEntity<String> ingestDocument(
+            @RequestPart("file") MultipartFile file,
+            @RequestHeader(value = "X-Session-ID", required = false, defaultValue = "default-session") String sessionId) throws IOException, TikaException {
+//        log.info("Ingesting document for session {}: {}", sessionId, file.getOriginalFilename());
+        ragService.ingestDocument(file, sessionId);
+        return ResponseEntity.ok("Document ingested successfully for session: " + sessionId);
     }
 
     @PostMapping("/query")
-    public ResponseEntity<String> query(@RequestBody String userQuery) {
-        return ResponseEntity.ok(ragService.query(userQuery));
+    public ResponseEntity<String> query(
+            @RequestBody String userQuery,
+            @RequestHeader(value = "X-Session-ID", required = false, defaultValue = "default-session") String sessionId) {
+        return ResponseEntity.ok(ragService.query(userQuery, sessionId));
     }
 }

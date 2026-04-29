@@ -61,6 +61,19 @@ public class RagService {
         return chunkRepo.countBySessionId(sessionId) == 0;
     }
 
+    private double cosineSimilarity(float[] vectorA, List<Float> vectorB) {
+        double dotProduct = 0.0;
+        double normA = 0.0;
+        double normB = 0.0;
+        for (int i = 0; i < vectorA.length && i < vectorB.size(); i++) {
+            dotProduct += vectorA[i] * vectorB.get(i);
+            normA += Math.pow(vectorA[i], 2);
+            normB += Math.pow(vectorB.get(i), 2);
+        }
+        if (normA == 0 || normB == 0) return 0;
+        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+    }
+
     public String retrieveContext(String userQuery, String sessionId) {
         if (isKnowledgeBaseEmpty(sessionId)) {
             return "";
@@ -68,7 +81,17 @@ public class RagService {
         float[] queryEmbedding = embeddingService.generateEmbedding(userQuery).block();
         if (queryEmbedding == null) return "";
         
-        List<DocumentChunk> relevantChunks = chunkRepo.findSimilarChunks(Arrays.toString(queryEmbedding), sessionId);
+        List<DocumentChunk> allChunks = chunkRepo.findBySessionId(sessionId);
+        
+        List<DocumentChunk> relevantChunks = allChunks.stream()
+                .filter(chunk -> chunk.getEmbedding() != null && !chunk.getEmbedding().isEmpty())
+                .sorted((c1, c2) -> Double.compare(
+                        cosineSimilarity(queryEmbedding, c2.getEmbedding()),
+                        cosineSimilarity(queryEmbedding, c1.getEmbedding())
+                ))
+                .limit(5)
+                .collect(Collectors.toList());
+
         return relevantChunks.stream()
                 .map(DocumentChunk::getText)
                 .collect(Collectors.joining("\n"));

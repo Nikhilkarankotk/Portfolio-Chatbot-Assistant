@@ -14,6 +14,7 @@ interface Message {
   rating?: number; // 1 for thumbs up, -1 for thumbs down
   detectedLanguage?: string;
   isTranslated?: boolean;
+  copied?: boolean;
 }
 
 @Component({
@@ -35,6 +36,10 @@ export class ChatInterface implements AfterViewChecked, OnInit {
   isIngesting = false;
   ingestSuccess = false;
   ingestError = '';
+
+  // Editing State
+  editingMessageId: number | null = null;
+  editedContent: string = '';
 
   // Correction Modal State
   showCorrectionModal = false;
@@ -59,18 +64,18 @@ export class ChatInterface implements AfterViewChecked, OnInit {
       next: async (history: any[]) => {
         this.messages = [];
         for (const msg of history ?? []) {
-           const parsedContent = msg.content || '';
-           const htmlParsed = msg.role === 'assistant' ? await marked.parse(parsedContent) : undefined;
-           
-           this.messages.push({
-             id: msg.id,
-             content: parsedContent,
-             htmlContent: htmlParsed,
-             role: msg.role as 'user' | 'assistant',
-             timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
-             detectedLanguage: msg.detectedLanguage,
-             isTranslated: msg.isTranslated
-           });
+          const parsedContent = msg.content || '';
+          const htmlParsed = msg.role === 'assistant' ? await marked.parse(parsedContent) : undefined;
+
+          this.messages.push({
+            id: msg.id,
+            content: parsedContent,
+            htmlContent: htmlParsed,
+            role: msg.role as 'user' | 'assistant',
+            timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+            detectedLanguage: msg.detectedLanguage,
+            isTranslated: msg.isTranslated
+          });
         }
         this.isLoading = false;
         this.cdr.detectChanges();
@@ -138,6 +143,44 @@ export class ChatInterface implements AfterViewChecked, OnInit {
     });
   }
 
+  // --- Action Methods ---
+  copyToClipboard(msg: Message) {
+    navigator.clipboard.writeText(msg.content).then(() => {
+      msg.copied = true;
+      setTimeout(() => msg.copied = false, 2000);
+    });
+  }
+
+  startEditing(msg: Message) {
+    if (msg.id) {
+      this.editingMessageId = msg.id;
+      this.editedContent = msg.content;
+    }
+  }
+
+  cancelEditing() {
+    this.editingMessageId = null;
+    this.editedContent = '';
+  }
+
+  saveEdit(msg: Message) {
+    if (!this.editedContent.trim()) return;
+    
+    // In a real app, you might want to update the backend here.
+    // For now, we'll update the local message and re-send it.
+    const newText = this.editedContent.trim();
+    msg.content = newText;
+    msg.htmlContent = undefined; // Clear HTML so it re-renders if needed
+    
+    this.editingMessageId = null;
+    this.userInput = newText;
+    this.sendMessage(); // Resend the edited prompt
+  }
+
+  editPrompt(content: string) {
+    this.userInput = content;
+  }
+
   // --- Feedback & Correction ---
   rateMessage(msg: Message, rating: number) {
     if (!msg.id) return;
@@ -164,8 +207,8 @@ export class ChatInterface implements AfterViewChecked, OnInit {
     if (!this.activeCorrectionMessage?.id || !this.correctionText.trim()) return;
 
     this.api.submitFeedback(
-      this.activeCorrectionMessage.id, 
-      this.activeCorrectionMessage.rating || 0, 
+      this.activeCorrectionMessage.id,
+      this.activeCorrectionMessage.rating || 0,
       this.correctionText
     ).subscribe({
       next: () => {

@@ -69,5 +69,3 @@ The system uses a **Session-Isolated RAG** model. When a document is uploaded, i
 4.  **Stored**: Chunks and vectors are saved to PostgreSQL via standard JPA mappings.
 5.  **Retrieved**: On query, the system calculates similarity in-memory for the specific session, ensuring data privacy and high speed.
 
----
-*Built with ❤️ by [Nikhil.dev]*

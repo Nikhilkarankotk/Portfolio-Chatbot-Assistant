@@ -6,6 +6,7 @@ import com.portfolio.chatbot.service.MistralApiService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.apache.tika.exception.TikaException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -16,14 +17,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class RagService {
     private final DocumentParser documentParser;
     private final TextChunker textChunker;
     private final EmbeddingService embeddingService;
     private final DocumentChunkRepository chunkRepo;
     private final MistralApiService mistralApiService;
-
 
     public RagService(DocumentParser documentParser, TextChunker textChunker, EmbeddingService embeddingService, DocumentChunkRepository chunkRepo, MistralApiService mistralApiService) {
         this.documentParser = documentParser;
@@ -33,9 +32,10 @@ public class RagService {
         this.mistralApiService = mistralApiService;
     }
 
+
     @Transactional
-    public void ingestDocument(MultipartFile file) throws IOException, TikaException {
-        chunkRepo.deleteAll(); // clear existing chunks
+    public void ingestDocument(MultipartFile file, String sessionId) throws IOException, TikaException {
+        chunkRepo.deleteBySessionId(sessionId); // clear existing chunks for THIS session
         String text = documentParser.parseDocument(file);
         List<String> chunks = textChunker.chunkText(text, 500);
         for (String chunk : chunks) {
@@ -45,6 +45,7 @@ public class RagService {
             }
             DocumentChunk docChunk = new DocumentChunk();
             docChunk.setText(chunk);
+            docChunk.setSessionId(sessionId);
 //            docChunk.setEmbedding(embedding);
             List<Float> embeddingList = new ArrayList<>();
             for (float f : embedding) {
@@ -56,17 +57,28 @@ public class RagService {
             chunkRepo.save(docChunk);
         }
     }
-    public String query(String userQuery) {
+    public boolean isKnowledgeBaseEmpty(String sessionId) {
+        return chunkRepo.countBySessionId(sessionId) == 0;
+    }
+
+    public String retrieveContext(String userQuery, String sessionId) {
+        if (isKnowledgeBaseEmpty(sessionId)) {
+            return "";
+        }
         float[] queryEmbedding = embeddingService.generateEmbedding(userQuery).block();
-        System.out.println("Query Embedding: " + Arrays.toString(queryEmbedding));
-        List<DocumentChunk> relevantChunks = chunkRepo.findSimilarChunks(Arrays.toString(queryEmbedding));
-        System.out.println("Retrieved Chunks: " + relevantChunks);
-        String context = relevantChunks.stream()
+        if (queryEmbedding == null) return "";
+        
+        List<DocumentChunk> relevantChunks = chunkRepo.findSimilarChunks(Arrays.toString(queryEmbedding), sessionId);
+        return relevantChunks.stream()
                 .map(DocumentChunk::getText)
                 .collect(Collectors.joining("\n"));
+    }
+
+    public String query(String userQuery, String sessionId) {
+        String context = retrieveContext(userQuery, sessionId);
         String augmentedPrompt = """
             You are a portfolio assistant. Use the following context to answer the user's question.
-            If you dont know, say you dont know.
+            If you don't know, say you don't know.
             Context: %s
             Question: %s
             """.formatted(context, userQuery);

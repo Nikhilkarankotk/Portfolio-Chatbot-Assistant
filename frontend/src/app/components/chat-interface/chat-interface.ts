@@ -1,15 +1,19 @@
-import { Component, inject, ElementRef, ViewChild, AfterViewChecked, ChangeDetectorRef, OnInit } from '@angular/core';
+import { Component, inject, ElementRef, ViewChild, AfterViewChecked, ChangeDetectorRef, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Api } from '../../services/api/api';
 import { marked } from 'marked';
 
 interface Message {
+  id?: number;
   content: string;
   htmlContent?: string;
   role: 'user' | 'assistant';
   timestamp: Date;
   isError?: boolean;
+  rating?: number; // 1 for thumbs up, -1 for thumbs down
+  detectedLanguage?: string;
+  isTranslated?: boolean;
 }
 
 @Component({
@@ -22,6 +26,8 @@ export class ChatInterface implements AfterViewChecked, OnInit {
   private api = inject(Api);
   private cdr = inject(ChangeDetectorRef);
 
+  @Output() messageSent = new EventEmitter<void>();
+
   messages: Message[] = [];
   userInput = '';
   selectedFile: File | null = null;
@@ -29,6 +35,11 @@ export class ChatInterface implements AfterViewChecked, OnInit {
   isIngesting = false;
   ingestSuccess = false;
   ingestError = '';
+
+  // Correction Modal State
+  showCorrectionModal = false;
+  activeCorrectionMessage: Message | null = null;
+  correctionText = '';
 
   @ViewChild('chatContainer') private chatContainer!: ElementRef;
   @ViewChild('fileInput') private fileInput!: ElementRef;
@@ -52,10 +63,13 @@ export class ChatInterface implements AfterViewChecked, OnInit {
            const htmlParsed = msg.role === 'assistant' ? await marked.parse(parsedContent) : undefined;
            
            this.messages.push({
+             id: msg.id,
              content: parsedContent,
              htmlContent: htmlParsed,
              role: msg.role as 'user' | 'assistant',
-             timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date()
+             timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+             detectedLanguage: msg.detectedLanguage,
+             isTranslated: msg.isTranslated
            });
         }
         this.isLoading = false;
@@ -74,50 +88,6 @@ export class ChatInterface implements AfterViewChecked, OnInit {
     this.scrollToBottom();
   }
 
-  scrollToBottom(): void {
-    try {
-      this.chatContainer.nativeElement.scrollTop =
-        this.chatContainer.nativeElement.scrollHeight;
-    } catch (err) {}
-  }
-
-  onFileSelected(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
-      this.selectedFile = input.files[0];
-      this.ingestSuccess = false;
-      this.ingestError = '';
-    }
-  }
-
-  removeFile() {
-    this.selectedFile = null;
-    this.ingestSuccess = false;
-    this.ingestError = '';
-    if (this.fileInput) this.fileInput.nativeElement.value = '';
-  }
-
-  ingestDocument() {
-    if (!this.selectedFile) return;
-    this.isIngesting = true;
-    this.ingestError = '';
-    this.ingestSuccess = false;
-
-    this.api.ingestRagDocument(this.selectedFile).subscribe({
-      next: () => {
-        this.isIngesting = false;
-        this.ingestSuccess = true;
-        this.selectedFile = null;
-        if (this.fileInput) this.fileInput.nativeElement.value = '';
-      },
-      error: (err) => {
-        this.isIngesting = false;
-        this.ingestError = 'Failed to process document. Please try again.';
-        console.error(err);
-      }
-    });
-  }
-
   sendMessage() {
     if (!this.userInput.trim() || this.isLoading) return;
 
@@ -128,30 +98,21 @@ export class ChatInterface implements AfterViewChecked, OnInit {
 
     this.api.sendChatMessage(text).subscribe({
       next: async (res: any) => {
-        console.log('Backend response received:', res);
         this.isLoading = false;
         try {
-          let parsed = res;
-          if (typeof res === 'string') {
-            try {
-              parsed = JSON.parse(res);
-            } catch (e) {
-              // Not JSON, keep as is
-            }
-          }
-
-          const messageText = typeof parsed === 'string' 
-            ? parsed 
-            : (parsed && parsed.content ? parsed.content : JSON.stringify(parsed));
-
+          const messageText = res.content || JSON.stringify(res);
           const htmlParsed = await marked.parse(messageText);
 
           this.messages.push({
-            content: messageText || '(Empty response)',
+            id: res.id,
+            content: messageText,
             htmlContent: htmlParsed,
             role: 'assistant',
-            timestamp: new Date()
+            timestamp: new Date(res.timestamp || new Date()),
+            detectedLanguage: res.detectedLanguage,
+            isTranslated: res.isTranslated
           });
+          this.messageSent.emit();
         } catch (err: any) {
           console.error('Error parsing response in UI:', err);
           this.messages.push({
@@ -165,15 +126,94 @@ export class ChatInterface implements AfterViewChecked, OnInit {
       },
       error: (err: any) => {
         this.isLoading = false;
-        const errMessage = err.message ? err.message : JSON.stringify(err);
+        const errMessage = err.message || JSON.stringify(err);
         this.messages.push({
           content: `Backend Error: ${errMessage}`,
-          htmlContent: `Backend Error: ${errMessage}`,
           role: 'assistant',
           isError: true,
           timestamp: new Date()
         });
-        alert('HTTP Request Failed: ' + errMessage);
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  // --- Feedback & Correction ---
+  rateMessage(msg: Message, rating: number) {
+    if (!msg.id) return;
+    const newRating = msg.rating === rating ? 0 : rating;
+    this.api.submitFeedback(msg.id, newRating).subscribe({
+      next: () => msg.rating = newRating,
+      error: (err) => console.error('Feedback failed', err)
+    });
+  }
+
+  openCorrectionModal(msg: Message) {
+    this.activeCorrectionMessage = msg;
+    this.correctionText = msg.content;
+    this.showCorrectionModal = true;
+  }
+
+  closeCorrectionModal() {
+    this.showCorrectionModal = false;
+    this.activeCorrectionMessage = null;
+    this.correctionText = '';
+  }
+
+  submitCorrection() {
+    if (!this.activeCorrectionMessage?.id || !this.correctionText.trim()) return;
+
+    this.api.submitFeedback(
+      this.activeCorrectionMessage.id, 
+      this.activeCorrectionMessage.rating || 0, 
+      this.correctionText
+    ).subscribe({
+      next: () => {
+        this.closeCorrectionModal();
+        alert('Thank you! Your correction has been recorded.');
+      },
+      error: (err) => {
+        console.error('Correction failed', err);
+        alert('Failed to submit correction.');
+      }
+    });
+  }
+
+  formatTime(date: Date): string {
+    return new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  scrollToBottom(): void {
+    if (this.chatContainer) {
+      this.chatContainer.nativeElement.scrollTop = this.chatContainer.nativeElement.scrollHeight;
+    }
+  }
+
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      this.selectedFile = input.files[0];
+    }
+  }
+
+  removeFile() {
+    this.selectedFile = null;
+    if (this.fileInput) this.fileInput.nativeElement.value = '';
+  }
+
+  ingestDocument() {
+    if (!this.selectedFile) return;
+    this.isIngesting = true;
+    this.api.ingestRagDocument(this.selectedFile).subscribe({
+      next: () => {
+        this.isIngesting = false;
+        this.ingestSuccess = true;
+        this.selectedFile = null;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.isIngesting = false;
+        this.ingestError = 'Failed to process document.';
         this.cdr.detectChanges();
       }
     });
@@ -181,14 +221,7 @@ export class ChatInterface implements AfterViewChecked, OnInit {
 
   clearChat() {
     this.messages = [];
-    this.ingestSuccess = false;
-    this.ingestError = '';
-    // Generate new chat session ID
     const newId = 'session_' + Math.random().toString(36).substring(2, 15);
     this.api.setSessionId(newId);
-  }
-
-  formatTime(date: Date): string {
-    return new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   }
 }

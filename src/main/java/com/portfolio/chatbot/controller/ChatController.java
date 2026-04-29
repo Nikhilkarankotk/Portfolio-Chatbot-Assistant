@@ -22,19 +22,19 @@ public class ChatController {
         this.chatService = chatService;
     }
 
-    @PostMapping("/chat")
+    @PostMapping(value = "/chat", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ChatMessage> handleMessage(
             @RequestBody ChatRequest request,
-            @RequestHeader("X-Session-ID") String sessionId) {
+            @RequestHeader(value = "X-Session-ID", required = false, defaultValue = "default-session") String sessionId) {
         return ResponseEntity.ok(
             chatService.processUserMessage(sessionId, request.getMessage())
         );
     }
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/chat", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ChatMessage> handleMessage(
             @RequestPart("message") String message,
             @RequestPart("pdf") MultipartFile pdfFile,
-            @RequestHeader("X-Session-ID") String sessionId) {
+            @RequestHeader(value = "X-Session-ID", required = false, defaultValue = "default-session") String sessionId) {
 
         // Process PDF file if needed
         // For example: extract text, metadata, etc.
@@ -45,7 +45,7 @@ public class ChatController {
     }
     @GetMapping("/history")
     public ResponseEntity<List<ChatMessage>> getHistory(
-            @RequestHeader("X-Session-ID") String sessionId) {
+            @RequestHeader(value = "X-Session-ID", required = false, defaultValue = "default-session") String sessionId) {
         return ResponseEntity.ok(
             chatService.getChatHistory(sessionId)
         );

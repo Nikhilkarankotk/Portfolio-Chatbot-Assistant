@@ -14,6 +14,7 @@ public class DocumentChunk {
     private Long id;
     @Column(columnDefinition = "TEXT")
     private String text;
+    private String sessionId;
 //    @Convert(converter = FloatArrayConverter.class)
 //    @Column(columnDefinition = "vector(1536)")
 //    private float[] embedding; // Store embeddings as float[]
@@ -36,5 +37,13 @@ public class DocumentChunk {
 
     public void setText(String text) {
         this.text = text;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
     }
 }

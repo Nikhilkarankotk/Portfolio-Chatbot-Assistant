@@ -7,7 +7,7 @@ import { Observable } from 'rxjs';
 })
 export class Api {
   private http = inject(HttpClient);
-  private backendUrl = 'http://localhost:8080/api';
+  private backendUrl = (window as any).API_BASE_URL || 'http://localhost:8080/api';
 
   private activeSessionId: string | null = null;
 

@@ -1,0 +1,42 @@
+version: 0.2
+
+# CodeBuild spec for the Angular frontend.
+# Builds the production bundle, injects the public API base URL, uploads the
+# static assets to Amazon S3 and invalidates the CloudFront cache.
+#
+# Environment variables provided by the CodeBuild project (see CloudFormation):
+#   S3_BUCKET_NAME               bucket that backs the CloudFront distribution
+#   CLOUDFRONT_DISTRIBUTION_ID   distribution to invalidate after upload
+#   API_BASE_URL                 public API base URL (CloudFront domain + /api)
+
+env:
+  shell: bash
+  variables:
+    NODE_OPTIONS: "--max-old-space-size=4096"
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      - echo "Installing frontend dependencies..."
+      - cd frontend
+      - npm ci
+  build:
+    commands:
+      - echo "Injecting API base URL ($API_BASE_URL)"
+      - sed -i "s|window.API_BASE_URL = \"\";|window.API_BASE_URL = \"$API_BASE_URL\";|" src/index.html
+      - echo "Building Angular app on $(date)"
+      - npx ng build --configuration production
+  post_build:
+    commands:
+      - echo "Syncing build output to s3://$S3_BUCKET_NAME"
+      - aws s3 sync dist/frontend/browser "s3://$S3_BUCKET_NAME" --delete
+      - echo "Invalidating CloudFront distribution $CLOUDFRONT_DISTRIBUTION_ID"
+      - aws cloudfront create-invalidation --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" --paths "/*"
+
+artifacts:
+  files:
+    - "**/*"
+  base-directory: frontend/dist/frontend/browser
+  name: frontend-artifact

@@ -1,0 +1,58 @@
+version: 0.2
+
+# CodeBuild spec for the Spring Boot backend.
+# Builds the Docker image, pushes it to Amazon ECR and emits the artifacts that
+# the CodePipeline "Deploy" stage uses to update the ECS Fargate service:
+#   - imagedefinitions.json : maps the container name to the new image URI
+#   - taskdef.json          : task definition template with values rendered in
+#
+# Environment variables provided by the CodeBuild project (see CloudFormation):
+#   REPOSITORY_URI              ECR image URI
+#   ECS_CONTAINER_NAME          container name inside the task definition
+#   ECS_TASK_EXECUTION_ROLE_ARN ECS task execution role ARN
+#   ECS_TASK_ROLE_ARN           ECS task role ARN
+#   DB_URL                      JDBC connection string for Amazon RDS
+#   CORS_ALLOWED_ORIGINS        comma separated list of allowed browser origins
+#   LOG_GROUP                   CloudWatch log group name
+
+env:
+  shell: bash
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - aws ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "${REPOSITORY_URI%%/*}"
+      - ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+      - COMMIT_HASH=$(echo "$CODEBUILD_RESOLVED_SOURCE_VERSION" | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:-latest}
+      - echo "Image tag is $IMAGE_TAG"
+  build:
+    commands:
+      - echo "Building Docker image on $(date)"
+      - docker build -t "$REPOSITORY_URI:latest" .
+      - docker tag "$REPOSITORY_URI:latest" "$REPOSITORY_URI:$IMAGE_TAG"
+  post_build:
+    commands:
+      - echo "Pushing image to ECR on $(date)"
+      - docker push "$REPOSITORY_URI:latest"
+      - docker push "$REPOSITORY_URI:$IMAGE_TAG"
+      - echo "Writing imagedefinitions.json..."
+      - printf '[{"name":"%s","imageUri":"%s"}]' "$ECS_CONTAINER_NAME" "$REPOSITORY_URI:$IMAGE_TAG" > imagedefinitions.json
+      - echo "Rendering taskdef.json..."
+      - |
+        sed -e "s|__AWS_REGION__|${AWS_DEFAULT_REGION}|g" \
+            -e "s|__AWS_ACCOUNT_ID__|${ACCOUNT_ID}|g" \
+            -e "s|__TASK_EXECUTION_ROLE_ARN__|${ECS_TASK_EXECUTION_ROLE_ARN}|g" \
+            -e "s|__TASK_ROLE_ARN__|${ECS_TASK_ROLE_ARN}|g" \
+            -e "s|__DB_URL__|${DB_URL}|g" \
+            -e "s|__CORS_ALLOWED_ORIGINS__|${CORS_ALLOWED_ORIGINS}|g" \
+            -e "s|__LOG_GROUP__|${LOG_GROUP}|g" \
+            deploy/taskdef.json > taskdef.json
+      - cat taskdef.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
+    - taskdef.json
+  discard-paths: yes

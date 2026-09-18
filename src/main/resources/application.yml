@@ -2,14 +2,14 @@ spring:
   application:
     name: "Users"
   datasource:
-    url: jdbc:postgresql://localhost:5433/portfolio_chatbot
-    username: postgres
-    password: 'postgres'
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/portfolio_chatbot}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: ${SHOW_SQL:true}
     properties:
       hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
 #  servlet:
@@ -20,3 +20,7 @@ mistral:
   api:
     key: ${MISTRAL_API_KEY}  # From environment variables
     base-url: https://api.mistral.ai/v1
+
+cors:
+  # Comma separated list of allowed browser origins (dev: http://localhost:4200).
+  allowed-origin: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
